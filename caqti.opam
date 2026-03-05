@@ -25,6 +25,7 @@ depends: [
   "lwt-dllist"
   "mdx" {with-test & >= "2.3.0"}
   "mtime" {>= "2.0.0"}
+  "mirage-mtime" {>= "5.2.0"}
   "ocaml" {>= "4.08.0"}
   "odoc" {with-doc}
   "ptime"

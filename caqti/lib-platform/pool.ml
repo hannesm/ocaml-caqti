@@ -22,6 +22,8 @@ let default_max_size =
 
 let default_log_src = Logs.Src.create "Caqti_platform.Pool"
 
+let now () = Mtime.of_uint64_ns (Mirage_mtime.elapsed_ns ())
+
 module type ALARM = sig
   type switch
   type stdenv
@@ -170,7 +172,7 @@ struct
         (function
          | Ok resource ->
             Fiber.return @@
-              Ok {resource; used_count = 0; used_latest = Mtime_clock.now ()}
+              Ok {resource; used_count = 0; used_latest = now () }
          | Error err ->
             on_error () >|= fun () ->
             Error err))
@@ -219,7 +221,6 @@ struct
       (match Queue.peek_opt pool.queue, pool.max_idle_age with
        | None, _ | _, None -> Fiber.return ()
        | Some entry, Some max_idle_age ->
-          let now = Mtime_clock.now () in
           (match Mtime.add_span entry.used_latest max_idle_age with
            | None ->
               Logs.warn ~src:pool.log_src (fun f -> f
@@ -227,7 +228,7 @@ struct
                  Mtime overflow.");
               pool.reaper_state <- Idle;
               Fiber.return ()
-           | Some expiry when Mtime.compare now expiry < 0 ->
+           | Some expiry when Mtime.compare (now ()) expiry < 0 ->
               let alarm =
                 Alarm.schedule
                   ~sw:pool.switch ~stdenv:pool.stdenv
@@ -286,7 +287,7 @@ struct
           begin
             if ok then
               begin
-                entry.used_latest <- Mtime_clock.now ();
+                entry.used_latest <- now ();
                 Queue.add entry pool.queue;
                 dispose_expiring_lck pool
               end
